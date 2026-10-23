@@ -1,12 +1,18 @@
 services:
 
-  # ------------------ YOUR APPLICATION ------------------
-  app:
-    image: nginx:alpine            # <-- REPLACE with your image, e.g. myrepo/myapp:1.0
-    container_name: app
+  # ------------------ ARTIFACTORY (your application) ------------------
+  artifactory:
+    image: ${ARTIFACT_IMAGE:-custom-artifactory:latest}
+    container_name: artifactory
     restart: unless-stopped
     ports:
-      - "80:80"                    # <-- host:container, change to your app's port
+      - "80:80"
+    environment:
+      ARTIFACT_USER: ${ARTIFACT_USER:?set ARTIFACT_USER}
+      ARTIFACT_PASSWORD: ${ARTIFACT_PASSWORD:?set ARTIFACT_PASSWORD}
+      SERVER_NAME: ${SERVER_NAME:-}
+    volumes:
+      - artifactory-data:/var/www/html/artifacts
     depends_on:
       - fluent-bit
     logging:                       # sends this container's logs to Fluent Bit
@@ -98,3 +104,4 @@ volumes:
   prometheus-data:
   grafana-data:
   fluentbit-buffer:
+  artifactory-data:
