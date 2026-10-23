@@ -1,0 +1,16 @@
+services:
+  splunk:
+    image: splunk/splunk:9.3
+    container_name: splunk
+    restart: unless-stopped
+    environment:
+      SPLUNK_START_ARGS: "--accept-license"
+      SPLUNK_GENERAL_TERMS: "--accept-sgt-current-at-splunk-com"
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD}
+      SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN}
+    ports:
+      - "8000:8000"   # Web UI
+      - "8088:8088"   # HTTP Event Collector (log ingestion)
+    volumes:
+      - /data/splunk-var:/opt/splunk/var
+      - /data/splunk-etc:/opt/splunk/etc
