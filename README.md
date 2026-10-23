@@ -21,24 +21,7 @@ A beginner-friendly, copy-paste guide to deploy your application in Docker with:
 
 ## 1. Architecture
 
-```
-                         AWS VPC
- ┌─────────────────────────────────────────┐       ┌───────────────────────────┐
- │  EC2 #1  "app-server"                   │       │  EC2 #2  "splunk-server"  │
- │                                         │       │                           │
- │  ┌───────┐  logs   ┌────────────┐       │ HEC   │  ┌─────────────────────┐  │
- │  │  App  │───────▶ │ Fluent Bit │───────┼──────▶│  │ Splunk Enterprise   │  │
- │  └───────┘ (fluentd└────────────┘ 8088  │       │  │ Web UI :8000        │  │
- │     ▲      driver)                       │       │  │ HEC     :8088       │  │
- │     │ metrics                            │       │  └─────────────────────┘  │
- │  ┌──┴─────────┐   ┌─────────┐            │       └───────────────────────────┘
- │  │ Prometheus │◀──│ Grafana │ :3000      │
- │  └──▲──────▲──┘   └─────────┘            │
- │     │      │                             │
- │  node-exporter  cAdvisor                 │
- └─────────────────────────────────────────┘
-```
-
+![AWS VPC Monitoring and Logging Architecture](media/AWS%20VPC%20Monitoring%20and%20Logging%20Architecture.png)
 - **Metrics flow:** App / host / containers → Prometheus → Grafana
 - **Logs flow:** App → Fluent Bit → Splunk (over HTTPS, port 8088, using HEC = HTTP Event Collector)
 
