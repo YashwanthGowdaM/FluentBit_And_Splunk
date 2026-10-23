@@ -283,6 +283,7 @@ curl -k https://localhost:8088/services/collector/event \
 > `-k` skips certificate checking because Splunk uses a self-signed certificate by default.
 
 Splunk is ready.
+![Step 5.6.4](media/Step%205.6.4.png)
 
 ---
 
@@ -610,6 +611,8 @@ Useful searches:
 index=main sourcetype="docker:logs" source=stderr
 index=main sourcetype="docker:logs" container_name="/app" "error"
 ```
+
+![Step 7.3](media/Step%207.3.png)
 
 ### 7.4 Check Prometheus targets
 
