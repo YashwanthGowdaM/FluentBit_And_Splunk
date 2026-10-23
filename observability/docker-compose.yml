@@ -1,0 +1,99 @@
+services:
+
+  # ------------------ YOUR APPLICATION ------------------
+  app:
+    image: nginx:alpine            # <-- REPLACE with your image, e.g. myrepo/myapp:1.0
+    container_name: app
+    restart: unless-stopped
+    ports:
+      - "80:80"                    # <-- host:container, change to your app's port
+    depends_on:
+      - fluent-bit
+    logging:                       # sends this container's logs to Fluent Bit
+      driver: fluentd
+      options:
+        fluentd-address: "127.0.0.1:24224"
+        fluentd-async: "true"      # app still starts/runs even if Fluent Bit is down
+        tag: "app.{{.Name}}"       # must start with "app." to match Fluent Bit config
+
+  # ------------------ FLUENT BIT (log shipper) ------------------
+  fluent-bit:
+    image: fluent/fluent-bit:3.2
+    container_name: fluent-bit
+    restart: unless-stopped
+    environment:
+      - SPLUNK_HOST=${SPLUNK_HOST}
+      - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN}
+      - ENVIRONMENT=${ENVIRONMENT}
+    volumes:
+      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - fluentbit-buffer:/fluent-bit/buffer
+    ports:
+      - "127.0.0.1:24224:24224"    # only reachable from this server (Docker log driver)
+    logging:                       # Fluent Bit's OWN logs stay local and are size-limited
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ------------------ PROMETHEUS (metrics storage) ------------------
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"     # keep 15 days of metrics
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"      # local only, use SSH tunnel to view
+
+  # ------------------ GRAFANA (dashboards) ------------------
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  # ------------------ NODE EXPORTER (EC2 host metrics) ------------------
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - "--path.rootfs=/host"
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+
+  # ------------------ cADVISOR (container metrics) ------------------
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  fluentbit-buffer:
